@@ -92,8 +92,8 @@ class EntregaController
         $stmt = $db->prepare('SELECT id FROM transportadoras WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$data['id_transportadora']]);
         if (!$stmt->fetch()) {
-        json(['erro' => 'Transportadora não encontrada ou inativa'], 422);
-       } 
+            json(['erro' => 'Transportadora não encontrada ou inativa'], 422);
+        }
 
         $stmt = $db->prepare('SELECT id FROM remetentes WHERE id = ?');
         $stmt->execute([$data['id_remetente']]);
@@ -137,7 +137,6 @@ class EntregaController
         $db  = Database::connection();
         $ref = $params['id'];
 
-        // Aceita ID numérico ou código BRD-
         if (str_starts_with(strtoupper($ref), 'BRD-')) {
             $stmt = $db->prepare('SELECT id FROM entregas WHERE codigo = ?');
             $stmt->execute([strtoupper($ref)]);
@@ -171,8 +170,7 @@ class EntregaController
             json(['erro' => 'Entrega não encontrada'], 404);
         }
 
-        $novoStatus = strtoupper(trim($data['status'] ?? ''));
-
+        $novoStatus         = strtoupper(trim($data['status'] ?? ''));
         $proximosPermitidos = self::TRANSITIONS[$entrega['status']] ?? [];
 
         if (!in_array($novoStatus, $proximosPermitidos, true)) {
@@ -194,6 +192,7 @@ class EntregaController
 
         $stmt = $db->prepare('INSERT INTO ocorrencias (id_entrega, status, descricao, cidade, uf) VALUES (?, ?, ?, ?, ?)');
         $stmt->execute([$params['id'], $novoStatus, $descricao, $cidade, $uf]);
+
         $ocorrenciaId = $db->lastInsertId();
 
         $stmt = $db->prepare('SELECT * FROM ocorrencias WHERE id = ?');
@@ -205,14 +204,30 @@ class EntregaController
             'codigo' => $entrega['codigo'],
             'status' => $novoStatus,
             'ocorrencia_registrada' => [
-                'id'        => (int) $ocorrencia['id'],
-                'status'    => $ocorrencia['status'],
-                'descricao' => $ocorrencia['descricao'],
-                'cidade'    => $ocorrencia['cidade'],
-                'uf'        => $ocorrencia['uf'],
+                'id'         => (int) $ocorrencia['id'],
+                'status'     => $ocorrencia['status'],
+                'descricao'  => $ocorrencia['descricao'],
+                'cidade'     => $ocorrencia['cidade'],
+                'uf'         => $ocorrencia['uf'],
                 'created_at' => $ocorrencia['created_at'],
             ],
         ]);
+    }
+
+    public static function rastreamento(array $params): void
+    {
+        $db     = Database::connection();
+        $codigo = strtoupper(trim($params['codigo']));
+
+        $stmt = $db->prepare('SELECT id FROM entregas WHERE codigo = ?');
+        $stmt->execute([$codigo]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            json(['erro' => 'Entrega não encontrada'], 404);
+        }
+
+        json(self::findById($db, (int) $row['id']));
     }
 
     private static function gerarCodigo(PDO $db): string
@@ -283,21 +298,4 @@ class EntregaController
             ], $ocorrencias),
         ];
     }
-public static function rastreamento(array $params): void
-{
-    $db   = Database::connection();
-    $codigo = strtoupper(trim($params['codigo']));
-
-    $stmt = $db->prepare('SELECT id FROM entregas WHERE codigo = ?');
-    $stmt->execute([$codigo]);
-    $row = $stmt->fetch();
-
-    if (!$row) {
-        json(['erro' => 'Entrega não encontrada'], 404);
-    }
-
-    $entrega = self::findById($db, (int) $row['id']);
-    json($entrega);
-}
-
 }
