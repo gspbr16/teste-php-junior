@@ -283,4 +283,21 @@ class EntregaController
             ], $ocorrencias),
         ];
     }
+public static function rastreamento(array $params): void
+{
+    $db   = Database::connection();
+    $codigo = strtoupper(trim($params['codigo']));
+
+    $stmt = $db->prepare('SELECT id FROM entregas WHERE codigo = ?');
+    $stmt->execute([$codigo]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        json(['erro' => 'Entrega não encontrada'], 404);
+    }
+
+    $entrega = self::findById($db, (int) $row['id']);
+    json($entrega);
+}
+
 }

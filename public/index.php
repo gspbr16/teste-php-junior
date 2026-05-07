@@ -39,4 +39,6 @@ $router->patch('/entregas/{id}/status', [EntregaController::class, 'updateStatus
 // Não Conformidades
 $router->get('/motivos-nao-conformidade',                    [NaoConformidadeController::class, 'indexMotivos']);
 $router->post('/entregas/{id}/nao-conformidades',            [NaoConformidadeController::class, 'store']);
+$router->get('/entregas/{id}/nao-conformidades',             [NaoConformidadeController::class, 'indexByEntrega']);
+$router->get('/rastreamento/{codigo}',                       [EntregaController::class, 'rastreamento']);
 $router->dispatch();
