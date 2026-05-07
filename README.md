@@ -1,184 +1,118 @@
-# Teste Técnico — Desenvolvedor PHP Júnior
+# TMS — Transportation Management System
 
-## Contexto
+API para gerenciamento de entregas e transportadoras, desenvolvida como teste técnico.
 
-Você acabou de entrar no time de desenvolvimento de um TMS (Transportation Management System). No seu primeiro dia, chegou um bug reportado pelo time de operações e uma nova funcionalidade para implementar.
-
-Seu trabalho: **corrigir o bug e entregar a feature**.
-
----
-
-## Prazo
-
-**5 dias corridos** a partir do recebimento deste desafio.
-
----
-
-## Stack
-
-PHP 8.1+ · PDO · MySQL 8+ · [Phinx](https://phinx.org) (migrations e seeds)
+**Autor:** Gabriel Soares Prates
 
 ---
 
 ## Como rodar
 
-```bash
-# 1. Configure o ambiente
-cp .env.example .env
-# edite .env com suas credenciais MySQL
+**Requisitos:** PHP 8.1+, MySQL 8+, Composer
 
-# 2. Instale as dependências
+```bash
+# Clone o repositório
+git clone https://github.com/gspbr16/teste-php-junior.git
+cd teste-php-junior
+
+# Instale as dependências
 composer install
 
-# 3. Crie as tabelas
-vendor/bin/phinx migrate
+# Configure o banco
+cp .env.example .env
+# abra o .env e preencha com suas credenciais MySQL
 
-# 4. Popule os dados iniciais
+# Crie as tabelas e popule os dados
+vendor/bin/phinx migrate
 vendor/bin/phinx seed:run
 
-# 5. Suba o servidor
+# Suba o servidor
 php -S localhost:8000 public/index.php
 ```
 
 ---
 
-## Sistema atual
+## Endpoints
 
-Endpoints disponíveis:
+### Transportadoras
 
-```
-GET   /transportadoras
-POST  /transportadoras
-GET   /transportadoras/{id}
-PATCH /transportadoras/{id}/desativar
-PATCH /transportadoras/{id}/reativar
-
-GET   /entregas
-POST  /entregas
-GET   /entregas/{id}
-PATCH /entregas/{id}/status
+```bash
+GET  /transportadoras                        # lista ativas
+GET  /transportadoras?incluir_inativas=true  # lista todas
+GET  /transportadoras/1                      # busca por ID
+POST /transportadoras                        # cria nova
+PATCH /transportadoras/1/desativar
+PATCH /transportadoras/1/reativar
 ```
 
-Dados de seed disponíveis (use os IDs para testar):
-- 3 transportadoras (2 ativas, 1 inativa)
-- 2 remetentes
-- 3 destinatários
-- 3 entregas em status variados com histórico de ocorrências
-
-**Fluxo de status:**
+Exemplo de criação:
+```json
+{ "cnpj": "12345678000195", "nome_fantasia": "Transportadora Exemplo" }
 ```
+
+### Entregas
+
+```bash
+GET   /entregas          # lista entregas
+GET   /entregas/1        # busca por ID
+POST  /entregas          # cria nova entrega
+PATCH /entregas/1/status # atualiza status
+```
+
+Exemplo de criação:
+```json
+{
+  "id_transportadora": 1,
+  "id_remetente": 1,
+  "id_destinatario": 1,
+  "data_prazo": "2026-12-31",
+  "peso_kg": 10.5,
+  "volumes": 2
+}
+```
+
+Exemplo de atualização de status:
+```json
+{ "status": "COLETADA", "descricao": "Coletado na origem", "cidade": "São Paulo", "uf": "SP" }
+```
+
+### Não Conformidades
+
+```bash
+GET  /motivos-nao-conformidade          # lista motivos ativos
+POST /entregas/1/nao-conformidades      # registra uma NC
+```
+
+Exemplo:
+```json
+{ "id_motivo": 1, "descricao": "Produto chegou com embalagem danificada" }
+```
+
+---
+
+## Fluxo de status das entregas
+
 CRIADA → COLETADA → EM_TRANSITO → SAIU_ENTREGA → ENTREGUE
                                                ↘ DEVOLVIDA
-```
-Transições inválidas devem retornar `422`.
+
+Tentativas de transição fora desse fluxo retornam `422`.
 
 ---
 
-## Suas tarefas
+## Decisões que tomei
 
-### Tarefa 1 — Corrigir o bug
+**422 em vez de 404 para transportadora inativa**
+Quando a transportadora não está ativa, o sistema agora retorna 422.
+Faz mais sentido que 404 porque a transportadora existe — ela só está inativa.
 
-Leia o arquivo [`BUG_REPORT.md`](./BUG_REPORT.md), reproduza o problema, corrija e preencha o [`BUGFIX.md`](./BUGFIX.md).
+**Índice em `id_entrega` na tabela de não conformidades**
+As buscas mais comuns vão ser por entrega, então adicionei um índice
+nesse campo para não ter problema de performance no futuro.
 
-### Tarefa 2 — Não conformidades
+**`descricao` opcional nas não conformidades**
+O motivo já diz o que aconteceu. A descrição é para quem quiser
+detalhar mais, mas não é obrigatória.
 
-O time de operações precisa registrar ocorrências de entregas com problema (avaria, recusa, endereço errado, etc.).
-
-**Crie as migrations:**
-
-```
-motivos_nao_conformidade
-  id        INT UNSIGNED PK AUTO_INCREMENT
-  codigo    VARCHAR(30) UNIQUE NOT NULL
-  descricao VARCHAR(150) NOT NULL
-  ativo     TINYINT(1) NOT NULL DEFAULT 1
-
-nao_conformidades
-  id         INT UNSIGNED PK AUTO_INCREMENT
-  id_entrega INT UNSIGNED NOT NULL  →  FK entregas.id
-  id_motivo  INT UNSIGNED NOT NULL  →  FK motivos_nao_conformidade.id
-  descricao  VARCHAR(500) NULL
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-```
-
-**Crie o seeder `MotivosNaoConformidadeSeeder.php`** com:
-
-| codigo | descricao |
-|--------|-----------|
-| `AVARIA_PRODUTO` | Produto com avaria ou dano |
-| `NAO_ENTREGUE` | Destinatário ausente |
-| `ENDERECO_INCORRETO` | Endereço incorreto ou não localizado |
-| `RECUSADO` | Recusado pelo destinatário |
-| `EXTRAVIO` | Produto extraviado |
-| `OUTROS` | Outros motivos |
-
-**Implemente os endpoints:**
-
-```
-GET  /motivos-nao-conformidade
-     → retorna lista dos motivos com ativo = 1
-
-POST /entregas/{id}/nao-conformidades
-     body: { "id_motivo": 1, "descricao": "..." }
-     → registra a não conformidade
-     → id_motivo obrigatório; entrega e motivo devem existir
-```
-
----
-
-## Commits esperados
-
-Queremos ver o raciocínio em etapas — não um único commit com tudo.
-
-```
-fix:   correção do bug
-feat:  migration motivos_nao_conformidade
-feat:  migration nao_conformidades
-feat:  seeder MotivosNaoConformidadeSeeder
-feat:  GET /motivos-nao-conformidade
-feat:  POST /entregas/{id}/nao-conformidades
-docs:  BUGFIX.md preenchido
-```
-
----
-
-## Bônus
-
-- `GET /rastreamento/{codigo}` — rastreamento público pelo código da entrega (ex: `BRD-2024-00001`)
-- `GET /entregas/{id}/nao-conformidades` — listar NCs de uma entrega
-- Docker + docker-compose funcional
-- Testes automatizados
-
----
-
-## Critérios de avaliação
-
-| O que avaliamos | Peso |
-|-----------------|------|
-| Identificação e correção do bug | Alto |
-| BUGFIX.md — clareza técnica + resposta para o time | Alto |
-| Migrations corretas (FKs, índices, tipos) | Alto |
-| Endpoints de não conformidade funcionando | Alto |
-| Qualidade de código e organização | Médio |
-| Tratamento de erro e HTTP status codes | Médio |
-| Granularidade dos commits | Médio |
-
----
-
-## Entrega
-
-1. Suba em repositório **público** no GitHub (sem BRUDAM no nome)
-2. README do seu projeto com: como rodar, exemplos de requisição, decisões técnicas
-3. Envie ao recrutador: nome completo · link do repo · LinkedIn
-
----
-
-## Dúvidas
-
-Se algo estiver ambíguo, documente sua interpretação e siga. Decisão sob incerteza também é avaliada.
-
----
-
-## Autor
-
-**Michel Mileski** — [@eusouomichel](https://github.com/eusouomichel)
+**Com mais tempo faria:**
+testes automatizados e Docker para facilitar rodar o projeto em
+qualquer máquina.                                               
