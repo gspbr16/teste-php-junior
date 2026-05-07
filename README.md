@@ -79,31 +79,27 @@ Exemplo de atualização de status:
 ### Não Conformidades
 
 ```bash
-# Listar motivos disponíveis
-GET /motivos-nao-conformidade
+GET  /motivos-nao-conformidade             # lista motivos ativos
+POST /entregas/1/nao-conformidades         # registra uma NC
+GET  /entregas/1/nao-conformidades         # lista NCs de uma entrega
+```
 
-# Registrar não conformidade
-POST /entregas/1/nao-conformidades
-{"id_motivo": 1, "descricao": "Produto chegou com embalagem danificada"}
-
-# Listar não conformidades de uma entrega
-GET /entregas/1/nao-conformidades
+Exemplo de registro:
+```json
+{ "id_motivo": 1, "descricao": "Produto chegou com embalagem danificada" }
 ```
 
 ### Rastreamento
 
 ```bash
-# Rastrear entrega pelo código
-GET /rastreamento/BRD-2026-00001
-```
+GET /rastreamento/BRD-2026-00001           # rastreia entrega pelo código
 ```
 
 ---
 
 ## Fluxo de status das entregas
-
 CRIADA → COLETADA → EM_TRANSITO → SAIU_ENTREGA → ENTREGUE
-                                               ↘ DEVOLVIDA
+↘ DEVOLVIDA
 
 Tentativas de transição fora desse fluxo retornam `422`.
 
@@ -111,18 +107,8 @@ Tentativas de transição fora desse fluxo retornam `422`.
 
 ## Decisões que tomei
 
-**422 em vez de 404 para transportadora inativa**
-Quando a transportadora não está ativa, o sistema agora retorna 422.
-Faz mais sentido que 404 porque a transportadora existe — ela só está inativa.
-
-**Índice em `id_entrega` na tabela de não conformidades**
-As buscas mais comuns vão ser por entrega, então adicionei um índice
-nesse campo para não ter problema de performance no futuro.
-
-**`descricao` opcional nas não conformidades**
-O motivo já diz o que aconteceu. A descrição é para quem quiser
-detalhar mais, mas não é obrigatória.
-
-**Com mais tempo faria:**
-testes automatizados e Docker para facilitar rodar o projeto em
-qualquer máquina.                                               
+- Corrigi o status de resposta de `404` para `422` no bug da transportadora inativa — 404 seria errado porque a transportadora existe no banco, ela só está inativa.
+- Adicionei índice em `id_entrega` na tabela de não conformidades — consultas por entrega vão ser as mais frequentes.
+- Campo `descricao` nas não conformidades é opcional — o motivo já explica o problema, a descrição é só um detalhe extra.
+- Não conformidades não têm `updated_at` — uma vez registrada não pode ser alterada, o que garante um histórico confiável.
+- Com mais tempo, priorizaria testes automatizados e Docker.
