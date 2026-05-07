@@ -99,7 +99,7 @@ GET /rastreamento/BRD-2026-00001           # rastreia entrega pelo código
 
 ## Fluxo de status das entregas
 CRIADA → COLETADA → EM_TRANSITO → SAIU_ENTREGA → ENTREGUE
-↘ DEVOLVIDA
+                                               ↘ DEVOLVIDA
 
 Tentativas de transição fora desse fluxo retornam `422`.
 
