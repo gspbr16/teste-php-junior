@@ -79,13 +79,23 @@ Exemplo de atualização de status:
 ### Não Conformidades
 
 ```bash
-GET  /motivos-nao-conformidade          # lista motivos ativos
-POST /entregas/1/nao-conformidades      # registra uma NC
+# Listar motivos disponíveis
+GET /motivos-nao-conformidade
+
+# Registrar não conformidade
+POST /entregas/1/nao-conformidades
+{"id_motivo": 1, "descricao": "Produto chegou com embalagem danificada"}
+
+# Listar não conformidades de uma entrega
+GET /entregas/1/nao-conformidades
 ```
 
-Exemplo:
-```json
-{ "id_motivo": 1, "descricao": "Produto chegou com embalagem danificada" }
+### Rastreamento
+
+```bash
+# Rastrear entrega pelo código
+GET /rastreamento/BRD-2026-00001
+```
 ```
 
 ---
