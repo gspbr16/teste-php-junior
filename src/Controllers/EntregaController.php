@@ -89,11 +89,11 @@ class EntregaController
             }
         }
 
-        $stmt = $db->prepare('SELECT id FROM transportadoras WHERE id = ?');
+        $stmt = $db->prepare('SELECT id FROM transportadoras WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$data['id_transportadora']]);
         if (!$stmt->fetch()) {
-            json(['erro' => 'Transportadora não encontrada'], 404);
-        }
+        json(['erro' => 'Transportadora não encontrada ou inativa'], 422);
+       } 
 
         $stmt = $db->prepare('SELECT id FROM remetentes WHERE id = ?');
         $stmt->execute([$data['id_remetente']]);
